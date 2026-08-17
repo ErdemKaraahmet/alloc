@@ -1,20 +1,11 @@
 /*
-Platform independent C99 malloc implementation
+Custom C11 malloc implementation for Linux
 */
 #pragma once
 
-struct s_block {
-    size_t size;
-    struct s_block *next;
-    struct s_block *prev;
-    int free;
-    void *ptr;
-    char data[];
-};
+#include <stddef.h>
 
-typedef struct s_block *t_block;
-
-void *malloc(const size_t size);
+void *malloc(size_t size);
 
 void *calloc(size_t nmemb, size_t size);
 
