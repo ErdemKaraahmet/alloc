@@ -1,7 +1,5 @@
-// TODO more comments overall
-// TODO static
+// TODO static memory pool
 // TODO no dependency
-// TODO doxygen's format comments on header
 // TODO thread safe
 
 #include <sys/types.h>
@@ -25,9 +23,8 @@ struct s_block {
     struct s_block *prev;
     int is_free;
     void *ptr;
-    _Alignas(
-        max_align_t) char data[]; /* To simplify pointer arithmatic, to be sure
-               that all our operations are done with one byte precision */
+    _Alignas(max_align_t) char data[]; /* To simplify pointer arithmatic, to be
+               sure that all our operations are done with one byte precision */
 };
 
 typedef struct s_block *t_block;

@@ -1,5 +1,6 @@
 /*
-Custom C11 malloc implementation for Linux
+A C11 memory allocator implementation for Linux using `brk`/`sbrk`, based on
+Marwan Burelle's "A Malloc Tutorial" (EPITA/LSE, 2009).
 */
 #pragma once
 
