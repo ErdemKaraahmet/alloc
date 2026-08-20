@@ -9,9 +9,17 @@
 
 #include "../alloc.h"
 
-#define TEST_PASSED "\x1b[32mPASSED\x1b[0m\n"
-#define COUNT 100
+#define TEST_PASSED "\x1b[32mPASSED\x1b[0m"
+#define COUNT 1000
 #define ALIGNMENT _Alignof(max_align_t)
+
+#define RUN_TEST(func)                                                         \
+    do {                                                                       \
+        printf("%s ", #func);                                                  \
+        func();                                                                \
+        printf(TEST_PASSED);                                                   \
+        printf("\n");                                                          \
+    } while (0)
 
 void test_alignment(void);
 void test_malloc(void);
@@ -21,17 +29,24 @@ void test_realloc(void);
 
 int main(void) {
 
-    test_alignment();
-    test_malloc();
-    test_calloc();
-    test_free();
-    test_realloc();
+    printf("\nAllocations per test: %d\n\n", COUNT);
+
+    RUN_TEST(test_alignment);
+    RUN_TEST(test_malloc);
+    RUN_TEST(test_calloc);
+    RUN_TEST(test_free);
+    RUN_TEST(test_realloc);
+
+    printf("\n");
 
     return 0;
 }
 
 void test_malloc(void) {
-    printf("%s ", __func__);
+
+    // Edge case: zero-byte allocation
+    void *p_zero = malloc(0);
+    free(p_zero);
 
     unsigned int *ptrs[COUNT];
     for (size_t i = 0; i < COUNT; i++) {
@@ -42,26 +57,23 @@ void test_malloc(void) {
 
         // Write to all
         for (size_t k = 0; k < num_elements; k++) {
-            ptrs[i][k] = i * k * 1000;
+            ptrs[i][k] = (unsigned int)(i * k * 1000);
         }
     }
 
     for (size_t i = 0; i < COUNT; i++) {
         size_t num_elements = (i + 1) * 32;
         for (size_t k = 0; k < num_elements; k++) {
-            assert(ptrs[i][k] == i * k * 1000);
+            assert(ptrs[i][k] == (unsigned int)(i * k * 1000));
         }
     }
 
     for (size_t i = 0; i < COUNT; i++) {
         free(ptrs[i]);
     }
-
-    printf(TEST_PASSED);
 }
 
 void test_calloc(void) {
-    printf("%s ", __func__);
 
     unsigned int *ptrs[COUNT];
     for (size_t i = 0; i < COUNT; i++) {
@@ -81,12 +93,9 @@ void test_calloc(void) {
     for (size_t i = 0; i < COUNT; i++) {
         free(ptrs[i]);
     }
-
-    printf(TEST_PASSED);
 }
 
 void test_free(void) {
-    printf("%s ", __func__);
 
     // Test block reuse
     void *p1 = malloc(128);
@@ -122,19 +131,16 @@ void test_free(void) {
     free(e);
 
     free(c);
-
-    printf(TEST_PASSED);
 }
 
 void test_realloc(void) {
-    printf("%s ", __func__);
 
     // current size big enough, just shrink/split
     void *a = malloc(100);
     void *b = malloc(100);
 
     void *s = realloc(a, 12);
-    assert(s == a);
+    assert(s != NULL && s == a);
 
     /* if a = 0, b = 112 + 48. s total 48 + 16, empty space between b and s
      * is 86. s->size = 86 -BLOCK_SIZE = 38. therefore allocating less than 36
@@ -145,7 +151,7 @@ void test_realloc(void) {
 
     // big enough when fused with ->next (c that is just freed)
     void *f = realloc(s, 100);
-    assert(f == s);
+    assert(f != NULL && f == s);
 
     // fell back to malloc and check if data is preserved
     char *buffer = malloc(100);
@@ -155,14 +161,14 @@ void test_realloc(void) {
 
     memcpy(f, buffer, 100);
     void *m = realloc(f, 200);
-    assert(m != f && m != b);
+    assert(m != NULL && m != f && m != b);
     assert(memcmp(m, buffer, 100) == 0);
 
     free(b);
     free(m);
     free(buffer);
 
-    // C standard
+    // C standard edge cases
     void *p1 = realloc(
         NULL,
         50); // should return a new non-NULL pointer (behaves like malloc).
@@ -170,14 +176,12 @@ void test_realloc(void) {
 
     void *p2 = realloc(p1, 0); // should free ptr and return NULL.
     assert(p2 == NULL);
-
-    printf(TEST_PASSED);
 }
 
 void test_alignment(void) {
-    printf("%s ", __func__);
+
     void *ptrs[COUNT];
-    for (int i = 0; i < COUNT; i++) {
+    for (size_t i = 0; i < COUNT; i++) {
         ptrs[i] = malloc(rand() % 1000);
         // bitwise operators are defined only for integers.
         assert(((uintptr_t)ptrs[i] & (ALIGNMENT - 1)) == 0);
@@ -185,5 +189,4 @@ void test_alignment(void) {
     for (size_t i = 0; i < COUNT; i++) {
         free(ptrs[i]);
     }
-    printf(TEST_PASSED);
 }
